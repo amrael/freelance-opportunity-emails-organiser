@@ -1,0 +1,14 @@
+{
+  "name": "freelance-opportunity-emails-organiser",
+  "version": "1.0.0",
+  "private": true,
+  "bin": {
+    "foe": "./bin/foe"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1017.0",
+    "better-sqlite3": "^11.0.0",
+    "imap": "^0.8.19",
+    "mailparser": "^3.7.1"
+  }
+}

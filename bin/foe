@@ -1,0 +1,193 @@
+#!/usr/bin/env node
+/**
+ * foe — Freelance Opportunity Emails CLI
+ */
+
+// Load .env from project root
+const fs = require('fs');
+const path = require('path');
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const match = line.match(/^\s*([^#=]+?)\s*=\s*(.*?)\s*$/);
+    if (match && !process.env[match[1]]) {
+      process.env[match[1]] = match[2].replace(/\\n/g, '\n');
+    }
+  }
+}
+
+const command = process.argv[2];
+const args = process.argv.slice(3);
+
+function parseArgs(args) {
+  const opts = {};
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--all') opts.all = true;
+    else if (a === '--unseen') opts.unseen = true;
+    else if (a === '--show') opts.show = true;
+    else if (a === '--dry-run') opts.dryRun = true;
+    else if (a.startsWith('--') && args[i + 1] && !args[i + 1].startsWith('--')) {
+      const key = a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      opts[key] = args[++i];
+    } else {
+      positional.push(a);
+    }
+  }
+  return { opts, positional };
+}
+
+async function main() {
+  const { opts, positional } = parseArgs(args);
+
+  switch (command) {
+    case 'poll': {
+      const { poll } = require('../src/commands/poll');
+      await poll();
+      break;
+    }
+
+    case 'list':
+    case 'ls': {
+      const { list } = require('../src/commands/list');
+      list({
+        all: opts.all,
+        status: opts.status,
+        minPay: opts.minPay ? parseInt(opts.minPay) : null,
+      });
+      break;
+    }
+
+    case 'show': {
+      const id = positional[0];
+      if (!id) { console.error('Usage: foe show <id>'); process.exit(1); }
+      const { show } = require('../src/commands/show');
+      show(parseInt(id));
+      break;
+    }
+
+    case 'status': {
+      const id = positional[0];
+      const newStatus = positional[1];
+      if (!id || !newStatus) { console.error('Usage: foe status <id> <status> [--note "..."]'); process.exit(1); }
+      const { updateStatus } = require('../src/commands/status');
+      updateStatus(parseInt(id), newStatus, opts.note);
+      break;
+    }
+
+    case 'note': {
+      const id = positional[0];
+      const noteText = positional[1];
+      if (!id || !noteText) { console.error('Usage: foe note <id> "note text"'); process.exit(1); }
+      const { addNote } = require('../src/commands/note');
+      addNote(parseInt(id), noteText);
+      break;
+    }
+
+    case 'followup': {
+      const id = positional[0];
+      if (!id) { console.error('Usage: foe followup <id> --date YYYY-MM-DD --action "..."'); process.exit(1); }
+      const { setFollowup } = require('../src/commands/followup');
+      setFollowup(parseInt(id), opts.date, opts.action);
+      break;
+    }
+
+    case 'dismiss': {
+      const id = positional[0];
+      if (!id) { console.error('Usage: foe dismiss <id> [--note "reason"]'); process.exit(1); }
+      const { updateStatus } = require('../src/commands/status');
+      updateStatus(parseInt(id), '対象外', opts.note || '案件ではないメール');
+      break;
+    }
+
+    case 'reply': {
+      const id = positional[0];
+      if (!id) { console.error('Usage: foe reply <id> --note "..." | --show'); process.exit(1); }
+      const { reply } = require('../src/commands/reply');
+      await reply(parseInt(id), { note: opts.note, show: opts.show });
+      break;
+    }
+
+    case 'update': {
+      const { update } = require('../src/commands/update');
+      // Accept text from positional arg, or read from stdin
+      let text = positional.join(' ');
+      if (!text && !process.stdin.isTTY) {
+        text = fs.readFileSync('/dev/stdin', 'utf8');
+      }
+      await update(text, { dryRun: opts.dryRun });
+      break;
+    }
+
+    case 'export': {
+      const { exportToObsidian } = require('../src/commands/export');
+      exportToObsidian();
+      break;
+    }
+
+    case 'stats': {
+      const { stats } = require('../src/commands/stats');
+      stats();
+      break;
+    }
+
+    case 'help':
+    case undefined: {
+      console.log(`
+foe — Freelance Opportunity Emails
+
+━━ メール取得 ━━
+  poll                               iCloudから新着メールを取得・解析
+
+━━ 一覧・詳細 ━━
+  list                               アクティブな案件を一覧表示
+  list --all                         全案件（辞退・成約・対象外含む）
+  list --status 検討中               ステータスで絞り込み
+  list --min-pay 60                  月額下限(万円)で絞り込み
+  show <id>                          案件の詳細を表示
+
+━━ 案件管理 ━━
+  status <id> <status>               ステータスを変更（選考フローの進行）
+  status <id> <status> --note "理由"  変更理由を記録
+  dismiss <id>                       案件ではないメールを除外（→対象外）
+  dismiss <id> --note "営業メール"    理由付きで除外
+
+━━ メモ・フォローアップ ━━
+  note <id> "メモ"                   自分用メモを追記（何でも自由に）
+  followup <id> --date 2026-04-01 --action "返信する"
+                                     次のアクション期限を設定
+
+━━ 一括更新 ━━
+  update "テキスト"                    自由文からAIが案件を特定し一括更新
+  echo "テキスト" | foe update         stdinからも入力可能
+  update --dry-run "テキスト"          プレビューのみ（変更しない）
+
+━━ 返信 ━━
+  reply <id> --note "条件OK、面談希望"
+                                     方針を入力→AIが返信ドラフト生成（メモにも記録）
+  reply <id> --show                  保存済みドラフトを確認
+
+━━ エクスポート・統計 ━━
+  export                             Obsidianにエクスポート
+  stats                              統計を表示
+
+━━ ステータス一覧 ━━
+  新着 → 検討中 → エントリー済 → 面談済 → 成約
+                                ↘ 辞退
+  対象外（案件ではないメール）
+`);
+      break;
+    }
+
+    default:
+      console.error(`Unknown command: ${command}`);
+      console.error('Run "foe help" for usage.');
+      process.exit(1);
+  }
+}
+
+main().catch(err => {
+  console.error(`Error: ${err.message}`);
+  process.exit(1);
+});
