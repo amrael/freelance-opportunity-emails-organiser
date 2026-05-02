@@ -24,7 +24,7 @@ function stats() {
 
   const pendingFollowups = db.prepare(
     `SELECT id, company_name, next_action, next_action_date FROM opportunities
-     WHERE next_action IS NOT NULL AND status NOT IN ('辞退', '成約')
+     WHERE next_action IS NOT NULL AND status NOT IN ('辞退', 'アンマッチ', '成約')
      ORDER BY next_action_date ASC`
   ).all();
 

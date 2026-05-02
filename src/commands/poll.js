@@ -102,8 +102,8 @@ async function poll() {
 
       for (const opp of opportunities) {
         if (!opp.company_name) {
-          console.log(`  Warning: no company name extracted, skipping one opportunity`);
-          continue;
+          console.log(`  Warning: no company name extracted, using placeholder`);
+          opp.company_name = '（企業名未記載）';
         }
 
         // Override agent info from email sender (LLM often confuses agent with client company)

@@ -9,7 +9,7 @@ function addNote(id, noteText) {
     process.exit(1);
   }
 
-  const timestamp = new Date().toISOString().slice(0, 16);
+  const timestamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Tokyo', hour12: false }).slice(0, 16);
   const newNote = opp.notes
     ? `${opp.notes}\n[${timestamp}] ${noteText}`
     : `[${timestamp}] ${noteText}`;

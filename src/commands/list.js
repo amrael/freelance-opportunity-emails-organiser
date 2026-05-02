@@ -10,7 +10,7 @@ function list(options = {}) {
     where.push('status = ?');
     params.push(options.status);
   } else if (!options.all) {
-    where.push("status NOT IN ('辞退', '成約', '対象外')");
+    where.push("status NOT IN ('辞退', 'アンマッチ', '成約', '対象外')");
   }
 
   if (options.minPay) {
@@ -20,7 +20,7 @@ function list(options = {}) {
 
   const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
   const sql = `SELECT id, status, compensation_min, compensation_max, company_name, project_title,
-    agent_company, platform, ai_fit_score, first_seen_at, work_style, next_action_date
+    agent_company, platform, ai_fit_score, first_seen_at, work_style, next_action_date, notes
     FROM opportunities ${whereClause} ORDER BY first_seen_at DESC`;
 
   const rows = db.prepare(sql).all(...params);
@@ -55,6 +55,11 @@ function list(options = {}) {
       fit,
       date
     ));
+    if (options.notes && r.notes) {
+      for (const line of r.notes.split('\n')) {
+        console.log('    ' + line);
+      }
+    }
   }
 
   console.log(`\n${rows.length} opportunity(ies)`);
@@ -67,6 +72,7 @@ function statusIcon(status) {
     'エントリー済': '📨 ',
     '面談済': '🤝 ',
     '辞退': '❌ ',
+    'アンマッチ': '👻 ',
     '成約': '✅ ',
     '対象外': '🚫 ',
   };

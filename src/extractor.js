@@ -223,20 +223,26 @@ ${feedback}
 メール本文のみを返してください。`;
 
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        stream: false,
-        options: { temperature: 0.7 },
-      }),
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.message?.content?.trim() || null;
+    let content;
+    if (USE_BEDROCK) {
+      content = await callBedrock('あなたはビジネスメール作成アシスタントです。メール本文のみを返してください。', prompt);
+    } else {
+      const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          stream: false,
+          options: { temperature: 0.7 },
+        }),
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      content = data.message?.content?.trim() || null;
+    }
+    // Strip <think> blocks from Qwen3
+    return content?.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim() || null;
   } catch (err) {
     console.error(`Reply draft generation failed: ${err.message}`);
     return null;

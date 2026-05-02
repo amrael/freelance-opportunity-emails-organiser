@@ -18,7 +18,7 @@ function getActiveOpportunities() {
   return db.prepare(`
     SELECT id, company_name, project_title, status, compensation, work_style, agent_name, agent_company
     FROM opportunities
-    WHERE status NOT IN ('対象外')
+    WHERE status NOT IN ('対象外', 'アンマッチ', '辞退', '成約')
     ORDER BY id
   `).all();
 }
@@ -44,14 +44,15 @@ ${oppList}
   {
     "id": 案件ID,
     "company_name": "企業名",
-    "new_status": "エントリー済 or 辞退 or 検討中 or 面談済 or 成約",
+    "new_status": "エントリー済 or 辞退 or アンマッチ or 検討中 or 面談済 or 成約",
     "note": "ユーザーの判断理由やコメントの要約"
   }
 ]
 
 判定ルール:
 - 「エントリーしたい」「進めたい」「希望」 → new_status: "エントリー済"
-- 「見送り」「辞退」「パス」 → new_status: "辞退"
+- 「自分から辞退」「見送り」「パス」「辞退」 → new_status: "辞退"
+- 「先方から応答なし」「一定期間応答がない」「音沙汰なし」「アンマッチ」「先方都合」 → new_status: "アンマッチ"
 - 「検討中」「もう少し考える」 → new_status: "検討中"
 - 質問や確認事項のみで判断が未定 → new_status: "検討中", noteに質問内容
 

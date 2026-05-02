@@ -25,6 +25,7 @@ function parseArgs(args) {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--all') opts.all = true;
+    else if (a === '--notes') opts.notes = true;
     else if (a === '--unseen') opts.unseen = true;
     else if (a === '--show') opts.show = true;
     else if (a === '--dry-run') opts.dryRun = true;
@@ -55,6 +56,7 @@ async function main() {
         all: opts.all,
         status: opts.status,
         minPay: opts.minPay ? parseInt(opts.minPay) : null,
+        notes: opts.notes,
       });
       break;
     }
@@ -142,9 +144,10 @@ foe — Freelance Opportunity Emails
 
 ━━ 一覧・詳細 ━━
   list                               アクティブな案件を一覧表示
-  list --all                         全案件（辞退・成約・対象外含む）
+  list --all                         全案件（辞退・アンマッチ・成約・対象外含む）
   list --status 検討中               ステータスで絞り込み
   list --min-pay 60                  月額下限(万円)で絞り込み
+  list --notes                       メモ(notes)を各行の下に表示
   show <id>                          案件の詳細を表示
 
 ━━ 案件管理 ━━
@@ -174,7 +177,8 @@ foe — Freelance Opportunity Emails
 
 ━━ ステータス一覧 ━━
   新着 → 検討中 → エントリー済 → 面談済 → 成約
-                                ↘ 辞退
+                                ↘ 辞退（自分から断った）
+                                ↘ アンマッチ（先方から応答なし・先方都合）
   対象外（案件ではないメール）
 `);
       break;

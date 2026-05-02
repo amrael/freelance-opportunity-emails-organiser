@@ -59,7 +59,7 @@ function migrate(db) {
       agent_email TEXT,
       agent_phone TEXT,
       platform TEXT,
-      status TEXT DEFAULT '新着' CHECK(status IN ('新着','検討中','エントリー済','面談済','辞退','成約','対象外')),
+      status TEXT DEFAULT '新着' CHECK(status IN ('新着','検討中','エントリー済','面談済','辞退','アンマッチ','成約','対象外')),
       notes TEXT,
       my_feedback TEXT,
       reply_draft TEXT,
@@ -121,6 +121,58 @@ function migrate(db) {
         agent_phone TEXT,
         platform TEXT,
         status TEXT DEFAULT '新着' CHECK(status IN ('新着','検討中','エントリー済','面談済','辞退','成約','対象外')),
+        notes TEXT,
+        my_feedback TEXT,
+        reply_draft TEXT,
+        next_action TEXT,
+        next_action_date TEXT,
+        ai_fit_score INTEGER,
+        ai_fit_reason TEXT,
+        first_seen_at TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now')),
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      INSERT INTO opportunities_new SELECT * FROM opportunities;
+      DROP TABLE opportunities;
+      ALTER TABLE opportunities_new RENAME TO opportunities;
+      CREATE INDEX IF NOT EXISTS idx_opps_status ON opportunities(status);
+      CREATE INDEX IF NOT EXISTS idx_opps_dedup ON opportunities(dedup_key);
+      CREATE INDEX IF NOT EXISTS idx_opps_compensation ON opportunities(compensation_min);
+    `);
+    db.pragma('foreign_keys = ON');
+  }
+
+  // Migration: add 'アンマッチ' to status CHECK constraint
+  const tableInfo2 = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='opportunities'").get();
+  if (tableInfo2 && !tableInfo2.sql.includes('アンマッチ')) {
+    db.pragma('foreign_keys = OFF');
+    db.exec(`
+      CREATE TABLE opportunities_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_name TEXT NOT NULL,
+        project_title TEXT,
+        dedup_key TEXT UNIQUE,
+        company_url TEXT,
+        location TEXT,
+        work_frequency TEXT,
+        work_style TEXT,
+        start_timing TEXT,
+        compensation TEXT,
+        compensation_min INTEGER,
+        compensation_max INTEGER,
+        summary TEXT,
+        background TEXT,
+        responsibilities TEXT,
+        team_structure TEXT,
+        required_skills TEXT,
+        preferred_skills TEXT,
+        highlights TEXT,
+        agent_name TEXT,
+        agent_company TEXT,
+        agent_email TEXT,
+        agent_phone TEXT,
+        platform TEXT,
+        status TEXT DEFAULT '新着' CHECK(status IN ('新着','検討中','エントリー済','面談済','辞退','アンマッチ','成約','対象外')),
         notes TEXT,
         my_feedback TEXT,
         reply_draft TEXT,

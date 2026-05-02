@@ -19,7 +19,7 @@ function exportToObsidian() {
     'SELECT status, COUNT(*) as count FROM opportunities GROUP BY status'
   ).all();
 
-  const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Tokyo', hour12: false }).slice(0, 16);
 
   let md = `# フリーランス案件パイプライン\n`;
   md += `> Last updated: ${now}\n\n`;
